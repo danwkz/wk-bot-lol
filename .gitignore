@@ -427,3 +427,7 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Portable Arduino toolchain fetched by wklol/arduino/flash.ps1 (hundreds of MB, reproducible)
+wklol/arduino/.toolchain/
+wklol/arduino/wk_hid/build/

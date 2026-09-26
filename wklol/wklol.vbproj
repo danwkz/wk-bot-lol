@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{5A3251A2-785F-4F04-9148-3DBA95EB2042}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <StartupObject>wklol.My.MyApplication</StartupObject>
+    <RootNamespace>wklol</RootNamespace>
+    <AssemblyName>wklol</AssemblyName>
+    <FileAlignment>512</FileAlignment>
+    <MyType>WindowsForms</MyType>
+    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+    <ApplicationIcon>wk.ico</ApplicationIcon>
+    <OptionExplicit>On</OptionExplicit>
+    <OptionCompare>Binary</OptionCompare>
+    <OptionStrict>Off</OptionStrict>
+    <OptionInfer>On</OptionInfer>
+    <!-- AnyCPU and not x64, unlike wk: the x64 requirement there came from SendInput's INPUT
+         union and the OpenCV binaries, and neither is in this project. The serial port and the
+         cursor read are the same on either bitness. -->
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <DefineDebug>true</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <OutputPath>bin\Debug\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <DefineDebug>false</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <!-- Reading a COM port's USB vendor/product ids, so flashing can pick the right board
+         definition instead of asking the user which bootloader their clone carries. -->
+    <Reference Include="System.Management" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <!-- The Chromium control behind UI\WebShell.vb, which hosts the HTML interface in web\.
+         The browser itself is the Evergreen WebView2 Runtime that ships with Windows 11. -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+  </ItemGroup>
+  <ItemGroup>
+    <Import Include="Microsoft.VisualBasic" />
+    <Import Include="System" />
+    <Import Include="System.Collections" />
+    <Import Include="System.Collections.Generic" />
+    <Import Include="System.Diagnostics" />
+    <Import Include="System.Drawing" />
+    <Import Include="System.Linq" />
+    <Import Include="System.Threading.Tasks" />
+    <Import Include="System.Windows.Forms" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Core\IBotModule.vb" />
+    <Compile Include="Core\ModuleState.vb" />
+    <Compile Include="Core\Logger.vb" />
+    <Compile Include="Core\BotContext.vb" />
+    <Compile Include="Core\ModuleHost.vb" />
+    <Compile Include="Core\BotEngine.vb" />
+    <Compile Include="Helpers\Clock.vb" />
+    <Compile Include="Helpers\HidKeyMap.vb" />
+    <Compile Include="Helpers\ArduinoLink.vb" />
+    <Compile Include="Helpers\ArduinoFlasher.vb" />
+    <Compile Include="Helpers\InputManager.vb" />
+    <Compile Include="Helpers\GlobalKeyHook.vb" />
+    <Compile Include="Helpers\LogFeed.vb" />
+    <Compile Include="Helpers\BotSettings.vb" />
+    <Compile Include="Helpers\SetupFields.vb" />
+    <Compile Include="Helpers\ArduinoSetup.vb" />
+    <Compile Include="Helpers\OrbWalkerSetup.vb" />
+    <Compile Include="Helpers\SettingsSetup.vb" />
+    <Compile Include="Modules\OrbWalkerModule.vb" />
+    <Compile Include="Host\BotHost.vb" />
+    <Compile Include="UI\WebAssets.vb" />
+    <Compile Include="UI\WebBridge.vb" />
+    <Compile Include="UI\WebShell.vb" />
+    <Compile Include="UI\FrmShell.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\FrmKeyCapture.Designer.vb">
+      <DependentUpon>FrmKeyCapture.vb</DependentUpon>
+    </Compile>
+    <Compile Include="UI\FrmKeyCapture.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="My Project\AssemblyInfo.vb" />
+    <Compile Include="My Project\ApplicationEvents.vb" />
+    <Compile Include="My Project\Application.Designer.vb">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Application.myapp</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="My Project\Application.myapp">
+      <Generator>MyApplicationCodeGenerator</Generator>
+      <LastGenOutput>Application.Designer.vb</LastGenOutput>
+    </None>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="wk.ico" />
+    <!-- The firmware and its upload script travel WITH the build, so a copy of the bot taken to
+         another machine can still flash a new board from Setup. The several-hundred-megabyte
+         toolchain is not copied and is fetched on first use, next to whichever of these copies
+         actually runs. See ArduinoFlasher.FindScript. -->
+    <Content Include="arduino\flash.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="arduino\wk_hid\wk_hid.ino">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="arduino\README.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- The HTML interface, built INTO the executable rather than copied beside it. WebShell
+         answers the page's requests from these resources through its own wk:// scheme — see
+         UI\WebAssets.vb. Every resource name is "web/" plus its path under the folder. -->
+    <EmbeddedResource Include="web\**">
+      <LogicalName>web/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
+</Project>

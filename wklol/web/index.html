@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  WK LoL — bot interface.
+
+  Built into wklol.exe and served to the embedded WebView2 from wk://app/index.html
+  by UI\WebShell.vb, out of memory. There is no HTTP server, no port and no
+  folder of loose files.
+
+  This file is structure only. Every value on screen arrives from the VB side
+  over the bridge in app.js — nothing here is real data, and the placeholder
+  text below is what the user sees for the moment before the first reply lands.
+-->
+<title>WK LoL</title>
+<link rel="icon" href="wk.png">
+<link rel="stylesheet" href="app.css">
+<script>
+  /* Applied before the first paint, not in app.js: reading the preference
+     after the stylesheet has rendered means a dark user sees a white flash on
+     every launch. Light is the default whenever there is nothing stored. */
+  try {
+    if (localStorage.getItem('wk.theme') === 'dark')
+      document.documentElement.dataset.theme = 'dark';
+  } catch (e) { /* private mode / storage disabled — stay light */ }
+</script>
+</head>
+<body>
+
+<!-- ── Icon sprite ──────────────────────────────────────────────────────────
+     One stroked 24×24 set so every glyph shares a weight and a cap style.
+     Referenced as <svg class="icon"><use href="#i-home"></use></svg>.
+     ───────────────────────────────────────────────────────────────────── -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/><path d="M9.5 20v-6h5v6"/>
+  </symbol>
+  <symbol id="i-setup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/>
+  </symbol>
+  <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22"/>
+  </symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2Z"/>
+  </symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.5 12h4l2.5-6.5 4 13L15.5 12h6"/>
+  </symbol>
+  <symbol id="i-tool" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15.5 3.8a5 5 0 0 0-6 6.4L3.6 16a2 2 0 1 0 2.8 2.8l5.8-5.9a5 5 0 0 0 6.4-6l-3 3-2.5-2.5 3-3Z"/>
+  </symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 14.5a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.3a2 2 0 1 1-4 0v-.2a1.6 1.6 0 0 0-2.8-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7h-.3a2 2 0 1 1 0-4h.2a1.6 1.6 0 0 0 1.1-2.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 2.7-1.1v-.3a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.8 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7h.3a2 2 0 1 1 0 4h-.2a1.6 1.6 0 0 0-1.4 1Z"/>
+  </symbol>
+  <symbol id="i-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2.5" y="7" width="19" height="10" rx="5"/><circle cx="16.5" cy="12" r="2.6"/>
+  </symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.5h-4.5"/>
+  </symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m5 12.5 4.5 4.5L19 7"/>
+  </symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m6 9.5 6 6 6-6"/>
+  </symbol>
+  <symbol id="i-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4.5 4.5h12L19.5 7.5v12h-15v-15Z"/><path d="M8 4.5v5h7v-5M8 19.5V14h8v5.5"/>
+  </symbol>
+  <symbol id="i-power" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3v8.5"/><path d="M7.1 6.2a7.5 7.5 0 1 0 9.8 0"/>
+  </symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5M12 16.3v.2"/>
+  </symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.7v.2"/>
+  </symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="4"/>
+    <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/>
+  </symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/>
+  </symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4.5 6.5h15M9.5 6.5V4.5h5v2M6.5 6.5l1 13h9l1-13"/>
+  </symbol>
+  <symbol id="i-keyboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2.5" y="6.5" width="19" height="11" rx="2"/>
+    <path d="M6 10v.01M9.5 10v.01M13 10v.01M16.5 10v.01M6 13.5h12"/>
+  </symbol>
+  <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 5.5l11 6.5L8 18.5V5.5Z"/>
+  </symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 6.5h6l2 2.5h10v9.5H3V6.5Z"/>
+  </symbol>
+  <symbol id="i-terminal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2.5" y="4.5" width="19" height="15" rx="2"/><path d="m6.5 9.5 3 2.5-3 2.5M13 15h4.5"/>
+  </symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 5.5h-9a2 2 0 0 0-2 2v9"/>
+  </symbol>
+  <symbol id="i-follow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3.5v10M8 10l4 4 4-4M4.5 20h15"/>
+  </symbol>
+  <symbol id="i-wrap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 6.5h16M4 17.5h4"/><path d="M4 12h12.5a2.75 2.75 0 0 1 0 5.5H11"/><path d="m13 15.5-2 2 2 2"/>
+  </symbol>
+</svg>
+
+<div class="app">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────────────
+       Logo top-left, navigation grouped by what the module DOES, and a
+       footer that answers "is anything running" from whatever screen.
+       ───────────────────────────────────────────────────────────────── -->
+  <aside class="side">
+
+    <div class="brand">
+      <img class="brand-mark" src="wk.png" alt="" draggable="false">
+      <div class="brand-name">WK</div>
+      <div class="brand-env" id="build-tag">—</div>
+    </div>
+
+    <nav class="nav" id="nav"><!-- built by app.js from NAV --></nav>
+
+    <!-- The setup flow's own rail. Takes the navigation's place while the flow is up — there
+         is nowhere else to go yet — and says where in it you are and what each step found. -->
+    <ol class="flow-rail" id="flow-rail" hidden>
+      <li class="nav-group">Setup</li>
+      <li class="flow-rail-item is-current" data-rail-step="1">
+        <span class="flow-rail-mark"><span class="flow-rail-num">1</span><svg class="icon"><use href="#i-check"></use></svg></span>
+        <span class="flow-rail-text"><span class="flow-rail-name">Board</span><span class="flow-rail-note"></span></span>
+      </li>
+      <li class="flow-rail-item" data-rail-step="2">
+        <span class="flow-rail-mark"><span class="flow-rail-num">2</span><svg class="icon"><use href="#i-check"></use></svg></span>
+        <span class="flow-rail-text"><span class="flow-rail-name">Firmware</span><span class="flow-rail-note"></span></span>
+      </li>
+      <li class="flow-rail-item" data-rail-step="3">
+        <span class="flow-rail-mark"><span class="flow-rail-num">3</span><svg class="icon"><use href="#i-check"></use></svg></span>
+        <span class="flow-rail-text"><span class="flow-rail-name">Check</span><span class="flow-rail-note"></span></span>
+      </li>
+      <li class="flow-rail-item" data-rail-step="4">
+        <span class="flow-rail-mark"><span class="flow-rail-num">4</span><svg class="icon"><use href="#i-check"></use></svg></span>
+        <span class="flow-rail-text"><span class="flow-rail-name">Ready</span><span class="flow-rail-note"></span></span>
+      </li>
+    </ol>
+
+    <div class="side-foot">
+      <div class="run-state">
+        <span class="dot" id="run-dot"></span>
+        <span id="run-text">Starting…</span>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── Main column ─────────────────────────────────────────────────── -->
+  <main class="main">
+
+    <header class="topbar">
+      <span class="topbar-title" id="view-title">Home</span>
+      <span class="topbar-sub"  id="view-sub">Board and module at a glance</span>
+      <span class="topbar-spacer"></span>
+
+      <!-- Light is the default. This only exists for people who want the
+           other one, and it remembers the choice per machine. -->
+      <button class="btn is-ghost is-icon" id="theme-toggle" title="Switch theme">
+        <span class="btn-body"><svg class="icon" id="theme-icon"><use href="#i-moon"></use></svg></span>
+        <span class="btn-spin"><span class="spinner"></span></span>
+      </button>
+    </header>
+
+    <div class="views" id="views">
+
+      <!-- ── Home ───────────────────────────────────────────────────── -->
+      <section class="view is-active" data-view="home">
+        <div class="grid">
+
+          <!-- Setup — the gate the module sits behind -->
+          <div class="card">
+            <div class="card-head">
+              <svg class="icon"><use href="#i-setup"></use></svg>
+              <span class="card-title">Setup</span>
+              <span class="card-head-end"><span class="tag" id="setup-tag">—</span></span>
+            </div>
+            <div class="steps" id="setup-steps">
+              <div class="step"><span class="step-mark"><svg class="icon" style="width:9px;height:9px"><use href="#i-check"></use></svg></span><span class="step-name skel">Board</span></div>
+              <div class="step"><span class="step-mark"><svg class="icon" style="width:9px;height:9px"><use href="#i-check"></use></svg></span><span class="step-name skel">Firmware</span></div>
+              <div class="step"><span class="step-mark"><svg class="icon" style="width:9px;height:9px"><use href="#i-check"></use></svg></span><span class="step-name skel">Check</span></div>
+            </div>
+            <div class="meter"><div class="meter-fill" id="setup-meter"></div></div>
+            <div class="row" style="margin-top:12px">
+              <button class="btn grow" id="setup-open" data-go="setup">
+                <span class="btn-body">Open setup</span>
+                <span class="btn-spin"><span class="spinner"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- The module -->
+          <div class="card">
+            <div class="card-head">
+              <svg class="icon"><use href="#i-target"></use></svg>
+              <span class="card-title">Orb Walker</span>
+              <span class="card-head-end"><span class="tag" id="home-orb-tag">—</span></span>
+            </div>
+            <div class="field">
+              <div class="field-label">Master key</div>
+              <div class="field-value mono skel" id="home-orb-master">Space</div>
+            </div>
+            <div class="field">
+              <div class="field-label">Cycle</div>
+              <div class="field-value skel" id="home-orb-cycle">Hold Q · press A · wait 100 ms · right click</div>
+            </div>
+            <div class="row" style="margin-top:12px">
+              <button class="btn grow" id="home-orb-open" data-go="orbwalker">
+                <span class="btn-body"><svg class="icon"><use href="#i-target"></use></svg>Open Orb Walker</span>
+                <span class="btn-spin"><span class="spinner"></span></span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── Setup ──────────────────────────────────────────────────────
+           Two lives, one piece of markup.
+
+           FIRST RUN (.is-wizard): the setup flow. One step on screen at a
+           time — a page header saying what the step is and why, the card
+           that does it, and a footer that says what is still missing and
+           moves on only when it is not. The rail swaps its navigation for
+           the four steps, so where you are is always on screen.
+
+           AFTERWARDS: the same cards as a plain checklist in the grid, for
+           checking the board again or flashing it anew. Everything marked
+           .flow-only disappears, and each .flow-step dissolves into the grid.
+           ───────────────────────────────────────────────────────────── -->
+      <section class="view" data-view="setup">
+        <div class="flow">
+
+          <header class="flow-head flow-only" id="flow-head">
+            <span class="flow-count" id="flow-count">Step 1 of 4</span>
+            <h1 class="flow-title" id="flow-title">Find the board</h1>
+            <p class="flow-lead" id="flow-lead"></p>
+          </header>
+
+          <div class="grid flow-body">
+
+            <!-- 1 · Board ────────────────────────────────────────────── -->
+            <section class="flow-step is-current-step" data-wizard-step="1">
+              <div class="card">
+                <div class="card-head">
+                  <svg class="icon"><use href="#i-tool"></use></svg>
+                  <span class="card-title">Board</span>
+                  <span class="card-head-end">
+                    <span class="tag" id="board-tag">—</span>
+                    <button class="btn is-icon" id="board-scan" title="Look again">
+                      <span class="btn-body"><svg class="icon"><use href="#i-refresh"></use></svg></span>
+                      <span class="btn-spin"><span class="spinner"></span></span>
+                    </button>
+                  </span>
+                </div>
+                <div class="verdict" id="board-verdict" hidden>
+                  <b class="verdict-title"></b>
+                  <p class="verdict-detail"></p>
+                </div>
+                <div class="settings">
+                  <label class="setting">
+                    <span class="setting-text">
+                      <b>Port</b>
+                      <span>Auto-detect is right unless the machine has other serial devices.</span>
+                    </span>
+                    <span class="setting-control">
+                      <span class="select">
+                        <select id="board-port"><option value="">Auto-detect</option></select>
+                        <svg class="icon"><use href="#i-chevron"></use></svg>
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </section>
+
+            <!-- 2 · Firmware ─────────────────────────────────────────── -->
+            <section class="flow-step" data-wizard-step="2">
+              <div class="card">
+                <div class="card-head">
+                  <svg class="icon"><use href="#i-zap"></use></svg>
+                  <span class="card-title">Firmware</span>
+                  <span class="card-head-end"><span class="tag" id="fw-tag">—</span></span>
+                </div>
+                <div class="verdict" id="fw-verdict" hidden>
+                  <b class="verdict-title"></b>
+                  <p class="verdict-detail"></p>
+                </div>
+                <div class="row">
+                  <button class="btn" id="fw-ask">
+                    <span class="btn-body"><svg class="icon"><use href="#i-refresh"></use></svg>Ask the board</span>
+                    <span class="btn-spin"><span class="spinner"></span></span>
+                  </button>
+                  <button class="btn is-primary" id="fw-flash" hidden>
+                    <span class="btn-body"><svg class="icon"><use href="#i-zap"></use></svg>Flash the firmware</span>
+                    <span class="btn-spin"><span class="spinner"></span></span>
+                  </button>
+                </div>
+                <!-- The first flash downloads the build tools. Asked here, next to the button,
+                     rather than in a dialog: the thing being agreed to is named right above it. -->
+                <div class="confirm is-info" id="fw-confirm" hidden>
+                  <svg class="icon"><use href="#i-info"></use></svg>
+                  <span class="confirm-text">Flashing needs the Arduino build tools, which are not on this machine
+                    yet. They are downloaded into <b>arduino\.toolchain</b> next to the bot — a few hundred
+                    megabytes, once. Nothing is installed into Windows, and deleting that folder undoes it.</span>
+                  <button class="btn" id="fw-confirm-cancel">
+                    <span class="btn-body">Not now</span>
+                    <span class="btn-spin"><span class="spinner"></span></span>
+                  </button>
+                  <button class="btn is-primary" id="fw-confirm-go">
+                    <span class="btn-body">Download and flash</span>
+                    <span class="btn-spin"><span class="spinner"></span></span>
+                  </button>
+                </div>
+                <!-- What the upload is doing right now; the first run can take minutes, and a
+                     silent minute reads as a hang. -->
+                <div class="progress" id="fw-progress" hidden>
+                  <span class="spinner"></span>
+                  <span class="progress-text"></span>
+                </div>
+              </div>
+            </section>
+
+            <!-- 3 · Check ────────────────────────────────────────────── -->
+            <section class="flow-step" data-wizard-step="3">
+              <div class="card span-2">
+                <div class="card-head">
+                  <svg class="icon"><use href="#i-pulse"></use></svg>
+                  <span class="card-title">Check</span>
+                  <span class="card-head-end">
+                    <span class="tag" id="check-tag">—</span>
+                    <button class="btn" id="check-run">
+                      <span class="btn-body"><svg class="icon"><use href="#i-refresh"></use></svg>Check again</span>
+                      <span class="btn-spin"><span class="spinner"></span></span>
+                    </button>
+                  </span>
+                </div>
+                <div class="verdict" id="check-verdict" hidden>
+                  <b class="verdict-title"></b>
+                  <p class="verdict-detail"></p>
+                </div>
+                <div class="facts" id="check-facts"></div>
+              </div>
+            </section>
+
+            <!-- 4 · Ready ────────────────────────────────────────────── -->
+            <section class="flow-step flow-only" data-wizard-step="4">
+              <div class="card">
+                <div class="card-head">
+                  <svg class="icon"><use href="#i-check"></use></svg>
+                  <span class="card-title">Setup</span>
+                  <span class="card-head-end"><span class="tag is-ok">Complete</span></span>
+                </div>
+                <div class="steps" id="flow-summary"></div>
+                <div class="meter"><div class="meter-fill is-ok" style="width:100%"></div></div>
+              </div>
+            </section>
+
+          </div>
+
+          <footer class="flow-foot flow-only">
+            <span class="flow-status">
+              <span class="dot" id="flow-dot"></span>
+              <span class="flow-status-text" id="flow-status"></span>
+            </span>
+            <button class="btn is-ghost" id="flow-back" hidden>
+              <span class="btn-body"><svg class="icon flow-back-arrow"><use href="#i-chevron"></use></svg>Back</span>
+              <span class="btn-spin"><span class="spinner"></span></span>
+            </button>
+            <button class="btn is-primary" id="flow-next" disabled>
+              <span class="btn-body"><span id="flow-next-text">Continue</span><svg class="icon flow-next-arrow"><use href="#i-chevron"></use></svg></span>
+              <span class="btn-spin"><span class="spinner"></span></span>
+            </button>
+          </footer>
+
+        </div>
+      </section>
+
+      <!-- ── Orb Walker ─────────────────────────────────────────────────
+           The cycle, row by row in the order it runs, with the key each row
+           presses printed like a key. The switch refuses until every row is
+           right, and says which one is not.
+           ───────────────────────────────────────────────────────────── -->
+      <section class="view" data-view="orbwalker">
+        <div class="grid">
+          <div class="card span-2">
+            <div class="card-head">
+              <svg class="icon"><use href="#i-target"></use></svg>
+              <span class="card-title">Orb Walker</span>
+              <span class="card-head-end">
+                <span class="tag" id="orb-tag">—</span>
+                <label class="switch" title="Turn the Orb Walker on or off">
+                  <input type="checkbox" id="orb-enabled">
+                  <span class="switch-track"><span class="switch-knob"></span></span>
+                  <span class="switch-label">Off</span>
+                </label>
+              </span>
+            </div>
+            <p class="card-note">
+              Hold the master key — or press it once, in toggle mode — and the cycle runs until you
+              let go (or press it again): the first key stays down the whole time, while the second
+              key and a click where the cursor is take turns, each followed by its own delay.
+            </p>
+
+            <div class="settings" id="orb-settings">
+              <div class="setting">
+                <span class="setting-num"><svg class="icon"><use href="#i-keyboard"></use></svg></span>
+                <span class="setting-text">
+                  <b>Master key</b>
+                  <span>Starts the cycle from anywhere. While the module is on, the game never sees this key.</span>
+                </span>
+                <span class="setting-control">
+                  <span class="keycap is-empty" id="orb-master">not set</span>
+                  <button class="btn" data-slot="master">
+                    <span class="btn-body"><svg class="icon"><use href="#i-keyboard"></use></svg><span data-slot-label>Set key</span></span>
+                    <span class="btn-spin"><span class="spinner"></span></span>
+                  </button>
+                </span>
+              </div>
+              <div class="setting">
+                <span class="setting-num"><svg class="icon"><use href="#i-toggle"></use></svg></span>
+                <span class="setting-text">
+                  <b>Toggle</b>
+                  <span>Off: the cycle runs while the master key is held. On: one press starts it, the next press stops it.</span>
+                </span>
+                <span class="setting-control">
+                  <label class="switch" title="Toggle mode on or off">
+                    <input type="checkbox" name="toggle">
+                    <span class="switch-track"><span class="switch-knob"></span></span>
+                  </label>
+                </span>
+              </div>
+              <div class="setting">
+                <span class="setting-num">1</span>
+                <span class="setting-text">
+                  <b>Key to hold</b>
+                  <span>Goes down when the cycle starts and comes up when it stops.</span>
+                </span>
+                <span class="setting-control">
+                  <span class="keycap is-empty" id="orb-hold">not set</span>
+                  <button class="btn" data-slot="hold">
+                    <span class="btn-body"><svg class="icon"><use href="#i-keyboard"></use></svg><span data-slot-label>Set key</span></span>
+                    <span class="btn-spin"><span class="spinner"></span></span>
+                  </button>
+                </span>
+              </div>
+              <div class="setting">
+                <span class="setting-num">2</span>
+                <span class="setting-text">
+                  <b>Key to press</b>
+                  <span>Tapped once at the start of every cycle.</span>
+                </span>
+                <span class="setting-control">
+                  <span class="keycap is-empty" id="orb-press">not set</span>
+                  <button class="btn" data-slot="press">
+                    <span class="btn-body"><svg class="icon"><use href="#i-keyboard"></use></svg><span data-slot-label>Set key</span></span>
+                    <span class="btn-spin"><span class="spinner"></span></span>
+                  </button>
+                </span>
+              </div>
+              <div class="setting">
+                <span class="setting-num">3</span>
+                <span class="setting-text">
+                  <b>Delay after the press</b>
+                  <span>The wait between the press and the click. Stopping the cycle cuts it short, with no click.</span>
+                </span>
+                <span class="setting-control">
+                  <input class="input is-tiny" name="delay" type="number" min="1" max="5000">
+                  <span class="setting-dash">ms</span>
+                </span>
+              </div>
+              <label class="setting">
+                <span class="setting-num">4</span>
+                <span class="setting-text">
+                  <b>Click</b>
+                  <span>Where the cursor is, without moving it. Right click is the move command.</span>
+                </span>
+                <span class="setting-control">
+                  <span class="select">
+                    <select name="button"></select>
+                    <svg class="icon"><use href="#i-chevron"></use></svg>
+                  </span>
+                </span>
+              </label>
+              <div class="setting">
+                <span class="setting-num">5</span>
+                <span class="setting-text">
+                  <b>Delay after the click</b>
+                  <span>The wait between the click and the next press, when the cycle starts again at 2.</span>
+                </span>
+                <span class="setting-control">
+                  <input class="input is-tiny" name="clickDelay" type="number" min="1" max="5000">
+                  <span class="setting-dash">ms</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Everything the switch would refuse over, one line each — the same list the bot
+                 checks, so the page can never say ready while the bot says no. -->
+            <p class="tool-note is-warn" id="orb-problems" hidden>
+              <svg class="icon"><use href="#i-alert"></use></svg><span></span>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Log ────────────────────────────────────────────────────────
+           The console. One line of plain text per entry, coloured by level
+           and nothing else. The toolbar is the part that makes it usable at a
+           thousand lines: which levels, which module, which words, and
+           whether the view follows the tail.
+           ───────────────────────────────────────────────────────────── -->
+      <section class="view" data-view="log">
+        <div class="log">
+
+          <div class="log-bar">
+            <!-- Counts live on the buttons: how many warnings there are is the
+                 same question as whether to look at them. -->
+            <div class="seg log-levels" id="log-levels">
+              <button class="seg-btn is-on" data-level="0">Info <b>0</b></button>
+              <button class="seg-btn is-warn is-on" data-level="1">Warnings <b>0</b></button>
+              <button class="seg-btn is-danger is-on" data-level="2">Errors <b>0</b></button>
+              <button class="seg-btn is-trace" data-level="3" title="Per-tick detail. Off by default — it is written to the session file either way.">Trace <b>0</b></button>
+            </div>
+
+            <input class="input log-search" id="log-search" type="search" spellcheck="false"
+                   placeholder="Filter lines…" autocomplete="off">
+
+            <label class="select log-source">
+              <select id="log-source"><option value="">Every module</option></select>
+              <svg class="icon"><use href="#i-chevron"></use></svg>
+            </label>
+
+            <span class="log-bar-spacer"></span>
+
+            <button class="btn is-icon is-on" id="log-follow" title="Following new lines">
+              <span class="btn-body"><svg class="icon"><use href="#i-follow"></use></svg></span>
+              <span class="btn-spin"><span class="spinner"></span></span>
+            </button>
+            <button class="btn is-icon" id="log-wrap" title="Wrap long lines">
+              <span class="btn-body"><svg class="icon"><use href="#i-wrap"></use></svg></span>
+              <span class="btn-spin"><span class="spinner"></span></span>
+            </button>
+            <button class="btn is-icon" id="log-copy" title="Copy what is on screen">
+              <span class="btn-body"><svg class="icon"><use href="#i-copy"></use></svg></span>
+              <span class="btn-spin"><span class="spinner"></span></span>
+            </button>
+            <button class="btn is-icon" id="log-save" title="Save what is on screen to a file">
+              <span class="btn-body"><svg class="icon"><use href="#i-save"></use></svg></span>
+              <span class="btn-spin"><span class="spinner"></span></span>
+            </button>
+            <button class="btn is-icon" id="log-folder" title="Show this session's log file">
+              <span class="btn-body"><svg class="icon"><use href="#i-folder"></use></svg></span>
+              <span class="btn-spin"><span class="spinner"></span></span>
+            </button>
+            <button class="btn is-icon" id="log-clear" title="Clear the console — the session file keeps every line">
+              <span class="btn-body"><svg class="icon"><use href="#i-trash"></use></svg></span>
+              <span class="btn-spin"><span class="spinner"></span></span>
+            </button>
+          </div>
+
+          <div class="log-out" id="log-out"><!-- lines, built by app.js --></div>
+
+          <!-- Only while the view is not following: it says what is being
+               missed and puts it one click away. -->
+          <button class="btn is-primary log-jump" id="log-jump" hidden>
+            <span class="btn-body"><svg class="icon"><use href="#i-follow"></use></svg><span id="log-jump-text">New lines</span></span>
+            <span class="btn-spin"><span class="spinner"></span></span>
+          </button>
+
+          <div class="log-foot">
+            <span id="log-count">—</span>
+            <span class="log-foot-spacer"></span>
+            <span class="log-file" id="log-file" title="This session's log file">—</span>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── Settings ───────────────────────────────────────────────────
+           How the bot types and clicks rather than what it does. Every card
+           applies as it is changed — number boxes on the way out of them —
+           and there is no Apply button anywhere.
+           ───────────────────────────────────────────────────────────── -->
+      <section class="view" data-view="settings">
+        <div class="grid">
+
+          <div class="card">
+            <div class="card-head">
+              <svg class="icon"><use href="#i-tool"></use></svg>
+              <span class="card-title">Board</span>
+            </div>
+            <div class="settings">
+              <div class="setting">
+                <span class="setting-text">
+                  <b>The board</b>
+                  <span id="set-board-status">Not checked yet — the board is opened when it is first needed.</span>
+                </span>
+                <span class="setting-control">
+                  <button class="btn is-icon" id="set-board-check" type="button" title="Look for it again">
+                    <span class="btn-body"><svg class="icon"><use href="#i-refresh"></use></svg></span>
+                    <span class="btn-spin"><span class="spinner"></span></span>
+                  </button>
+                </span>
+              </div>
+              <div class="setting">
+                <span class="setting-text">
+                  <b>Port</b>
+                  <span id="set-board-port">—</span>
+                </span>
+                <span class="setting-control">
+                  <button class="btn" data-go="setup" type="button" title="The port is picked in Setup, where the board is found">
+                    <span class="btn-body"><svg class="icon"><use href="#i-setup"></use></svg>Setup</span>
+                    <span class="btn-spin"><span class="spinner"></span></span>
+                  </button>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <svg class="icon"><use href="#i-keyboard"></use></svg>
+              <span class="card-title">Typing and clicking</span>
+            </div>
+            <div class="settings" id="set-input">
+              <div class="setting">
+                <span class="setting-text">
+                  <b>How the bot types and clicks</b>
+                  <span>Through the Arduino, as a real keyboard and mouse — and only that way.</span>
+                </span>
+                <span class="setting-control"><span class="tag is-ok">Hardware</span></span>
+              </div>
+              <div class="setting">
+                <span class="setting-text"><b>Key press</b><span>How long a key stays down, in milliseconds.</span></span>
+                <span class="setting-control">
+                  <input class="input is-tiny" name="keyMin" type="number" min="1" max="1000">
+                  <span class="setting-dash">to</span>
+                  <input class="input is-tiny" name="keyMax" type="number" min="1" max="1000">
+                </span>
+              </div>
+              <div class="setting">
+                <span class="setting-text"><b>Mouse click</b><span>How long the button stays down, in milliseconds.</span></span>
+                <span class="setting-control">
+                  <input class="input is-tiny" name="clickMin" type="number" min="1" max="1000">
+                  <span class="setting-dash">to</span>
+                  <input class="input is-tiny" name="clickMax" type="number" min="1" max="1000">
+                </span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- ── Closing the bot ───────────────────────────────────────────────────────
+     The product's one dialog. The window's X is not a click the page sees, so
+     the bot asks for it — see FrmShell.AskToClose — and fills in what closing
+     would stop. "Keep running" has the focus: the safe answer is the one Enter
+     gives. -->
+<div class="modal-scrim" id="exit-modal" hidden>
+  <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="exit-title" aria-describedby="exit-lead">
+    <div class="modal-band"></div>
+    <div class="modal-head">
+      <span class="modal-badge">
+        <img class="modal-mark" src="wk.png" alt="" draggable="false">
+        <span class="modal-pip"><svg class="icon"><use href="#i-power"></use></svg></span>
+      </span>
+      <div>
+        <h2 class="modal-title" id="exit-title">Close WK?</h2>
+        <p class="modal-lead" id="exit-lead">The bot <b>stops completely</b> — nothing keeps running once the window is gone.</p>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section-label">Stops now</div>
+      <div class="modal-chips" id="exit-running"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn is-primary" id="exit-cancel">
+        <span class="btn-body"><svg class="icon"><use href="#i-play"></use></svg>Keep running</span>
+        <span class="btn-spin"><span class="spinner"></span></span>
+      </button>
+      <button class="btn is-danger" id="exit-confirm">
+        <span class="btn-body"><svg class="icon"><use href="#i-power"></use></svg>Close the bot</span>
+        <span class="btn-spin"><span class="spinner"></span></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

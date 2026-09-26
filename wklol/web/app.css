@@ -1,0 +1,1563 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   wk — interface design system.
+
+   Every colour, radius, duration and easing in the product is declared once,
+   here, on :root. Nothing below this block hard-codes a colour: a restyle is
+   editing this one list, which is the whole reason the interface is HTML.
+
+   THE PALETTE COMES FROM THE LOGO. wk.png is a knight's helm in navy, and its
+   own pixels are the source of truth for the brand scale below — #071634 is
+   the background it is drawn on, #4BB4FF the highlight on the blade. Nothing
+   here was invented next to the logo; it was taken from it.
+
+   NAVY IS THE CONSTANT. The rail is navy in both themes, so the product reads
+   the same whichever one is on. Light is the default; dark is a preference.
+
+   THERE IS NO GREEN. "Done", "active" and "complete" are blue — the same
+   family as the brand — so the interface never has a second accent hue
+   competing with it. Amber and red stay, because a warning that shares a
+   colour with success is not a warning.
+
+   MOTION IS PART OF THE CONTRACT, not decoration. Three rules hold everywhere:
+     · nothing appears or disappears instantly — it fades and settles;
+     · nothing that was clicked stays silent — press, hover and busy are all
+       visible within one frame of the click;
+     · nothing blocks. A control waiting on the bot goes busy and stays
+       interactive-looking; it never freezes the window.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Brand scale, sampled from wk.png ─────────────────────────────────── */
+  --navy-900: #071634;   /* the logo's own background */
+  --navy-800: #0A2149;
+  --navy-700: #092C66;   /* the ring */
+  --navy-600: #0D3677;   /* the blade */
+  --brand:    #4BB4FF;   /* the highlight */
+
+  /* ── Light theme (the default) ────────────────────────────────────────── */
+  --bg:        #F2F5FA;
+  --surface:   #FFFFFF;
+  --raised:    #FFFFFF;
+  --hover:     #EDF1F8;
+  --line:      #DCE3ED;
+  --line-soft: #E8EDF4;
+
+  --text:  #0E1A2B;      /* near-navy rather than black, to stay in family */
+  --muted: #56647A;
+  --dim:   #8793A6;
+
+  --shadow-card: 0 1px 2px rgba(7, 22, 52, .05);
+  --shadow-pop:  0 10px 28px rgba(7, 22, 52, .14);
+
+  /* One accent, used only for "this is selected" and "this is the main
+     action" — and it is the RAIL'S OWN NAVY, so a primary button and the
+     sidebar are the same colour rather than two blues in the same window.
+     Hover lifts one step up the logo's scale instead of going lighter-blue.
+
+     Anything drawn ON these is white: at this darkness there is no second
+     option, and a dark glyph would disappear into the fill. */
+  --accent:      var(--navy-900);
+  --accent-hi:   var(--navy-800);
+  --accent-soft: rgba(13, 54, 119, .10);
+
+  /* Done / active / complete. The same navy: one strong blue for the whole
+     product, and no second hue competing with it. The soft tints stay on the
+     mid navy so a pale fill still reads blue rather than grey. */
+  --ok:        var(--navy-900);
+  --ok-soft:   rgba(13, 54, 119, .10);
+  --warn:      #C87B16;
+  --warn-soft: rgba(200, 123, 22, .11);
+  --danger:    #CE3A3A;
+  --danger-soft: rgba(206, 58, 58, .10);
+
+  /* ── The rail. Navy in both themes — it is the brand surface. ─────────── */
+  --side-bg:        var(--navy-900);
+  --side-line:      rgba(255, 255, 255, .07);
+  --side-text:      #A7BDDC;
+  --side-dim:       #6C86AC;
+  --side-hover:     rgba(255, 255, 255, .06);
+  --side-active-bg: rgba(75, 180, 255, .15);
+  --side-active:    #FFFFFF;
+  --side-marker:    var(--brand);
+
+  --r:      9px;
+  --r-sm:   6px;
+  --r-pill: 999px;
+
+  /* One easing for everything, three speeds. t1 = feedback (press, hover),
+     t2 = movement (views, panels), t3 = things the eye should follow. */
+  --e:  cubic-bezier(.4, 0, .2, 1);
+  --t1: 110ms;
+  --t2: 190ms;
+  --t3: 300ms;
+  /* The one overshoot, for something that ARRIVES and must be noticed doing it — the close
+     question. Everything that merely changes state keeps --e. */
+  --spring: cubic-bezier(.3, 1.3, .45, 1);
+
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+
+  --side-w: 194px;
+  --top-h:  46px;
+}
+
+/* ── Dark theme ────────────────────────────────────────────────────────────
+   Opt-in only: set data-theme="dark" on <html>. It is navy-tinted rather than
+   neutral grey, so the rail still belongs to the window it sits in.
+   ────────────────────────────────────────────────────────────────────────── */
+:root[data-theme="dark"] {
+  --bg:        #07121F;
+  --surface:   #0D1B2D;
+  --raised:    #132439;
+  --hover:     #1A2F49;
+  --line:      #1E344F;
+  --line-soft: #16283E;
+
+  --text:  #E3ECF8;
+  --muted: #94A7C1;
+  --dim:   #667D9C;
+
+  --shadow-card: none;
+  --shadow-pop:  0 10px 28px rgba(0, 0, 0, .5);
+
+  /* The one rule the dark theme cannot follow. In light, accent IS the rail's
+     navy; here the window is already dark, so a button in #071634 would be a
+     hole in the surface rather than a control. Dark takes the brand highlight
+     instead — the same family, the direction reversed, because on this surface
+     contrast is the thing that has to be preserved. */
+  --accent:      #4B93F5;
+  --accent-hi:   #6BA8F8;
+  --accent-soft: rgba(75, 147, 245, .15);
+
+  --ok:        #4BA5FF;
+  --ok-soft:   rgba(75, 165, 255, .15);
+  --warn:      #E5A44D;
+  --warn-soft: rgba(229, 164, 77, .14);
+  --danger:    #E5686B;
+  --danger-soft: rgba(229, 104, 107, .14);
+
+  --side-bg:   #050F24;   /* a shade under the logo, so the mark still lifts */
+}
+
+/* Someone who has asked the OS to stop animations gets a still interface that
+   still shows every state — the colours change, only the travel is removed. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;              /* the window never scrolls; views do */
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.45 var(--font);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  /* A WebView2 is a browser: without this, dragging a label selects text and
+     the caret blinks over headings. Neither belongs in a desktop window. */
+  cursor: default;
+  transition: background var(--t2) var(--e), color var(--t2) var(--e);
+}
+
+::selection { background: var(--accent-soft); }
+
+/* Scrollbars, made to belong to the surface instead of to Windows. */
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: var(--r-pill);
+  transition: background var(--t2) var(--e);
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--dim); background-clip: padding-box; }
+
+/* ── Shell ──────────────────────────────────────────────────────────────── */
+
+.app {
+  display: grid;
+  grid-template-columns: var(--side-w) 1fr;
+  height: 100vh;
+}
+
+/* ── Sidebar ────────────────────────────────────────────────────────────── */
+
+.side {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--side-bg);
+  transition: background var(--t2) var(--e);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: var(--top-h);
+  padding: 0 14px;
+  flex: 0 0 auto;
+}
+
+/* The product's own icon, the same art as wk.ico. Its navy backdrop is part
+   of the file, which is why it sits on the rail without a plate behind it. */
+.brand-mark {
+  width: 23px; height: 23px;
+  flex: 0 0 auto;
+  border-radius: var(--r-sm);
+  display: block;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .08);
+}
+
+.brand-name {
+  font-size: 13.5px;
+  font-weight: 640;
+  letter-spacing: .2px;
+  color: #FFFFFF;
+}
+
+.brand-env {
+  margin-left: auto;
+  font: 600 9px/1 var(--mono);
+  letter-spacing: .5px;
+  color: var(--side-dim);
+  padding: 3px 5px;
+  border: 1px solid var(--side-line);
+  border-radius: 4px;
+}
+
+.nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 8px 8px;
+}
+.nav::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .13); background-clip: padding-box; }
+
+.nav-group {
+  padding: 11px 6px 5px;
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: .9px;
+  text-transform: uppercase;
+  color: var(--side-dim);
+}
+
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 9px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--side-text);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--t1) var(--e), color var(--t1) var(--e);
+}
+
+/* The selection marker slides in rather than blinking on. */
+.nav-item::before {
+  content: "";
+  position: absolute;
+  left: -4px; top: 7px; bottom: 7px;
+  width: 2px;
+  border-radius: var(--r-pill);
+  background: var(--side-marker);
+  transform: scaleY(0);
+  transition: transform var(--t2) var(--e);
+}
+
+.nav-item:hover     { background: var(--side-hover); color: var(--side-active); }
+.nav-item:active    { transform: scale(.985); }
+.nav-item.is-active { background: var(--side-active-bg); color: var(--side-active); }
+.nav-item.is-active::before { transform: scaleY(1); }
+.nav-item.is-active .icon { color: var(--brand); }
+
+.nav-item .icon { flex: 0 0 auto; color: currentColor; opacity: .92; }
+.nav-item .nav-label {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Locked: readable, obviously unavailable, and it explains itself on click
+   instead of doing nothing. */
+.nav-item.is-locked { color: var(--side-dim); cursor: not-allowed; }
+.nav-item.is-locked:hover { background: transparent; color: var(--side-dim); }
+.nav-item.is-locked .icon { opacity: .45; }
+.nav-item .nav-lock { flex: 0 0 auto; opacity: .6; }
+
+@keyframes nudge {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-3px); }
+  75%      { transform: translateX(3px); }
+}
+.nav-item.is-nudging { animation: nudge 220ms var(--e); }
+
+/* Sidebar footer — the one line that says whether the bot can run at all. */
+.side-foot {
+  flex: 0 0 auto;
+  padding: 9px 12px 11px;
+  border-top: 1px solid var(--side-line);
+}
+
+.run-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--side-text);
+}
+
+/* ── Status dot, with a breathing halo while something is live ──────────── */
+
+.dot {
+  width: 7px; height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .45;
+  transition: background var(--t2) var(--e), box-shadow var(--t2) var(--e),
+              opacity var(--t2) var(--e);
+}
+.dot.is-ok     { background: var(--ok);     opacity: 1; }
+.dot.is-warn   { background: var(--warn);   opacity: 1; }
+.dot.is-danger { background: var(--danger); opacity: 1; }
+
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 0 0   currentColor; opacity: 1; }
+  50%      { box-shadow: 0 0 0 4px transparent;  opacity: .82; }
+}
+.dot.is-live { color: var(--ok); animation: breathe 2.2s var(--e) infinite; }
+
+/* On the rail the "ok" dot cannot be --ok: that navy IS the rail, and the dot
+   would vanish into its own background. The brand highlight is what this
+   surface contrasts against — the same colour the selection marker uses. */
+.side .dot.is-ok   { background: var(--brand); }
+.side .dot.is-live { color: var(--brand); }
+
+/* ── Main column ────────────────────────────────────────────────────────── */
+
+.main {
+  display: grid;
+  grid-template-rows: var(--top-h) 1fr;
+  min-width: 0;
+  min-height: 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface);
+  transition: background var(--t2) var(--e), border-color var(--t2) var(--e);
+}
+
+.topbar-title { font-size: 13.5px; font-weight: 620; letter-spacing: .1px; }
+
+.topbar-sub {
+  font-size: 11.5px;
+  color: var(--dim);
+  padding-left: 10px;
+  margin-left: 2px;
+  border-left: 1px solid var(--line);
+}
+
+.topbar-spacer { flex: 1 1 auto; }
+
+/* ── Views ──────────────────────────────────────────────────────────────── */
+
+/* Every view stays in the DOM, stacked. Switching cross-fades opacity and a
+   6px rise — no display toggling, so nothing reflows and nothing flashes. */
+.views { position: relative; min-height: 0; }
+
+.view {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: 16px 18px 20px;
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+  transition: opacity var(--t2) var(--e), transform var(--t2) var(--e);
+}
+.view.is-active { opacity: 1; transform: none; pointer-events: auto; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+.grid .span-2 { grid-column: 1 / -1; }
+
+@media (max-width: 860px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── Card ───────────────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+  padding: 13px 14px 14px;
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--t2) var(--e), box-shadow var(--t2) var(--e),
+              background var(--t2) var(--e);
+}
+.card:hover { border-color: var(--line); }
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 11px;
+}
+
+.card-title {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Direct child only. As a descendant selector this also caught the icon inside a
+   button sitting in the card's header, painting it accent-navy over an
+   accent-navy fill — an invisible glyph on the primary action. Anything nested
+   in there keeps the colour of whatever it sits on. */
+.card-head > .icon { color: var(--accent); opacity: .85; }
+.card-head-end { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+/* ── Field: a label over its value. The unit of everything on this screen. ─ */
+
+.field + .field { margin-top: 10px; }
+
+.field-label {
+  font-size: 10.5px;
+  letter-spacing: .3px;
+  color: var(--dim);
+  margin-bottom: 2px;
+}
+
+.field-value {
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.field-value.mono {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .3px;
+  user-select: text;
+  cursor: text;
+}
+
+.row { display: flex; gap: 10px; align-items: flex-end; }
+.row > * { min-width: 0; }
+.row .grow { flex: 1 1 auto; }
+
+/* ── Meter — a thin bar that animates to its value ──────────────────────── */
+
+.meter {
+  height: 3px;
+  border-radius: var(--r-pill);
+  background: var(--line);
+  overflow: hidden;
+  margin-top: 10px;
+}
+.meter-fill {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width var(--t3) var(--e), background var(--t2) var(--e);
+}
+.meter-fill.is-ok     { background: var(--ok); }
+.meter-fill.is-warn   { background: var(--warn); }
+.meter-fill.is-danger { background: var(--danger); }
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 29px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  overflow: hidden;                /* clips the press ripple */
+  transition: background var(--t1) var(--e), border-color var(--t1) var(--e),
+              color var(--t1) var(--e), transform var(--t1) var(--e),
+              opacity var(--t1) var(--e);
+}
+.btn:hover  { background: var(--hover); border-color: var(--dim); }
+.btn:active { transform: scale(.97); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.btn.is-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+.btn.is-primary:hover { background: var(--accent-hi); border-color: var(--accent-hi); }
+
+.btn.is-ghost { background: transparent; border-color: transparent; color: var(--muted); }
+.btn.is-ghost:hover { background: var(--hover); color: var(--text); }
+
+.btn.is-icon { width: 29px; padding: 0; }
+
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn[disabled]:hover  { background: var(--raised); border-color: var(--line); }
+/* A disabled primary keeps its own fill under the pointer — the rule above would paint it
+   white under white text, and the one action on the screen would vanish on hover. */
+.btn.is-primary[disabled]:hover { background: var(--accent); border-color: var(--accent); }
+.btn[disabled]:active { transform: none; }
+
+/* Busy: the label fades out, a spinner takes its place, and the control keeps
+   its size so nothing on the card moves. This is what every action that
+   crosses the bridge looks like while it waits. */
+.btn .btn-body { display: inline-flex; align-items: center; gap: 6px; transition: opacity var(--t1) var(--e); }
+.btn .btn-spin {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity var(--t1) var(--e);
+}
+.btn.is-busy { cursor: progress; }
+.btn.is-busy .btn-body { opacity: 0; }
+.btn.is-busy .btn-spin { opacity: 1; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 13px; height: 13px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  opacity: .85;
+  animation: spin 620ms linear infinite;
+}
+
+/* Press ripple — spawned by app.js at the click point. */
+@keyframes ripple { to { transform: scale(2.6); opacity: 0; } }
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .18;
+  transform: scale(0);
+  pointer-events: none;
+  animation: ripple 460ms var(--e) forwards;
+}
+
+/* ── Select ─────────────────────────────────────────────────────────────── */
+
+.select { position: relative; display: block; }
+
+.select select {
+  width: 100%;
+  height: 29px;
+  padding: 0 28px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  appearance: none;
+  transition: border-color var(--t1) var(--e), background var(--t1) var(--e);
+}
+.select select:hover { background: var(--hover); border-color: var(--dim); }
+.select select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.select option { background: var(--surface); color: var(--text); }
+.select .icon {
+  position: absolute;
+  right: 9px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--dim);
+  pointer-events: none;
+}
+
+/* ── Checklist — the setup steps ────────────────────────────────────────── */
+
+.steps { display: flex; flex-direction: column; gap: 1px; }
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 4px;
+  border-radius: var(--r-sm);
+  font-size: 12.5px;
+  color: var(--muted);
+  transition: background var(--t1) var(--e), color var(--t1) var(--e);
+}
+.step:hover { background: var(--hover); }
+
+.step-mark {
+  flex: 0 0 auto;
+  width: 15px; height: 15px;
+  display: grid; place-items: center;
+  border: 1.5px solid var(--line);
+  border-radius: 50%;
+  color: transparent;
+  transition: border-color var(--t2) var(--e), background var(--t2) var(--e),
+              color var(--t2) var(--e);
+}
+.step.is-done { color: var(--text); }
+.step.is-done .step-mark {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: #FFFFFF;
+}
+/* A step is one line, always. The name keeps its width and the note gives way,
+   because a checklist that reflows as its notes change reads as broken. */
+.step-name { flex: 1 1 auto; white-space: nowrap; }
+.step-note {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Inline confirm ─────────────────────────────────────────────────────── */
+
+.confirm {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 11px;
+  padding: 9px 11px;
+  border: 1px solid rgba(206, 58, 58, .3);
+  border-radius: var(--r-sm);
+  background: var(--danger-soft);
+  animation: progress-in var(--t2) var(--e);
+}
+.confirm[hidden] { display: none; }
+.confirm .icon { color: var(--danger); flex: 0 0 auto; }
+.confirm-text { flex: 1 1 140px; font-size: 11.5px; color: var(--text); }
+
+.btn.is-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+.btn.is-danger:hover { background: #B93232; border-color: #B93232; }
+
+/* ── Progress line ──────────────────────────────────────────────────────── */
+
+/* A running commentary rather than a bar: the steps behind it have no length to
+   measure, and a bar that cannot move honestly is worse than a sentence. */
+@keyframes progress-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: none; }
+}
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 11px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  animation: progress-in var(--t2) var(--e);
+}
+.progress[hidden] { display: none; }
+.progress .spinner { color: var(--accent); flex: 0 0 auto; }
+.progress-text {
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Switch ─────────────────────────────────────────────────────────────── */
+
+.switch { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+
+.switch-track {
+  width: 32px; height: 18px;
+  flex: 0 0 auto;
+  border-radius: var(--r-pill);
+  background: var(--line);
+  transition: background var(--t2) var(--e);
+}
+.switch-knob {
+  display: block;
+  width: 14px; height: 14px;
+  margin: 2px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(7, 22, 52, .3);
+  transition: transform var(--t2) var(--e);
+}
+.switch input:checked + .switch-track { background: var(--ok); }
+.switch input:checked + .switch-track .switch-knob { transform: translateX(14px); }
+.switch input:focus-visible + .switch-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.switch-label { font-size: 11.5px; color: var(--muted); min-width: 22px; }
+
+@keyframes editor-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.input {
+  height: 29px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  min-width: 0;
+  transition: border-color var(--t1) var(--e);
+}
+.input:hover { border-color: var(--dim); }
+.input:focus { outline: none; border-color: var(--accent); }
+.input.is-bad { border-color: var(--danger); }
+
+/* Segmented choice — spell or potion. Two states, always both visible, so the
+   alternative is never hidden behind a click. */
+.seg {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+}
+.seg-btn {
+  padding: 0 11px;
+  height: 23px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background var(--t1) var(--e), color var(--t1) var(--e);
+}
+.seg-btn:hover { color: var(--text); }
+.seg-btn.is-on { background: var(--accent); color: #FFFFFF; font-weight: 550; }
+
+/* ── Tag / pill ─────────────────────────────────────────────────────────── */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--r-pill);
+  background: var(--hover);
+  border: 1px solid var(--line);
+  font-size: 10.5px;
+  font-weight: 550;
+  letter-spacing: .2px;
+  color: var(--muted);
+}
+.tag.is-ok     { background: var(--ok-soft);     border-color: rgba(13, 54, 119, .3); color: var(--ok); }
+.tag.is-warn   { background: var(--warn-soft);   border-color: rgba(200, 123, 22, .3); color: var(--warn); }
+.tag.is-danger { background: var(--danger-soft); border-color: rgba(206, 58, 58, .3);  color: var(--danger); }
+
+/* ── Setup flow — the first run, one step at a time ─────────────────────────
+   Built from the same parts as every other screen: cards, card notes, tags,
+   the step marks of Home's checklist, the rail's own item shape. What is new
+   is only the arrangement — a page header, one step's cards in a readable
+   column, and a footer that says what is missing before it lets you move on.
+
+   The rail keeps its place and its navy; it trades the navigation for the
+   four steps, so the window still looks like WK and "where am I" is always
+   answered on the left. See renderWizardGate() in app.js. */
+
+/* Outside the flow the Setup screen is the plain checklist it always was: the
+   step wrappers dissolve into the grid and the flow's own parts are gone. */
+.flow-step { display: contents; }
+.view[data-view="setup"]:not(.is-wizard) .flow-only { display: none; }
+
+/* ── The rail, while the flow is up ─────────────────────────────────────── */
+
+@keyframes rail-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+body.is-wizard-active .nav { display: none; }
+body:not(.is-wizard-active) .nav { animation: rail-in var(--t3) var(--e); }
+
+.flow-rail {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 8px 8px;
+  list-style: none;
+  animation: rail-in var(--t3) var(--e);
+}
+.flow-rail[hidden] { display: none; }
+
+/* A nav item's shape and motion, but not a link: the flow moves forward only
+   from its own footer, so the rail reports and never navigates. */
+.flow-rail-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 9px;
+  margin-bottom: 2px;
+  border-radius: var(--r-sm);
+  color: var(--side-dim);
+  transition: background var(--t2) var(--e), color var(--t2) var(--e);
+}
+.flow-rail-item::before {
+  content: "";
+  position: absolute;
+  left: -4px; top: 8px; bottom: 8px;
+  width: 2px;
+  border-radius: var(--r-pill);
+  background: var(--side-marker);
+  transform: scaleY(0);
+  transition: transform var(--t2) var(--e);
+}
+.flow-rail-item.is-current { background: var(--side-active-bg); color: var(--side-active); }
+.flow-rail-item.is-current::before { transform: scaleY(1); }
+.flow-rail-item.is-done { color: var(--side-text); }
+
+.flow-rail-mark {
+  position: relative;
+  flex: 0 0 auto;
+  width: 20px; height: 20px;
+  display: grid; place-items: center;
+  border: 1.5px solid rgba(255, 255, 255, .16);
+  border-radius: 50%;
+  font: 600 10px/1 var(--font);
+  font-variant-numeric: tabular-nums;
+  transition: border-color var(--t2) var(--e), background var(--t2) var(--e), color var(--t2) var(--e);
+}
+.flow-rail-mark .icon {
+  position: absolute;
+  width: 10px; height: 10px;
+  opacity: 0;
+  transform: scale(.4);
+  transition: opacity var(--t2) var(--e), transform var(--t3) var(--e);
+}
+.flow-rail-num { transition: opacity var(--t1) var(--e); }
+.flow-rail-item.is-current .flow-rail-mark { border-color: var(--brand); color: #FFFFFF; }
+.flow-rail-item.is-done .flow-rail-mark { border-color: var(--brand); background: var(--brand); color: var(--navy-900); }
+.flow-rail-item.is-done .flow-rail-num { opacity: 0; }
+.flow-rail-item.is-done .flow-rail-mark .icon { opacity: 1; transform: none; }
+
+.flow-rail-text { display: flex; flex-direction: column; min-width: 0; }
+.flow-rail-name { font-size: 12.5px; line-height: 1.3; white-space: nowrap; }
+.flow-rail-note {
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--side-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--t2) var(--e);
+}
+.flow-rail-note:empty { display: none; }
+.flow-rail-item.is-current .flow-rail-note { color: var(--side-text); }
+
+/* ── The page ───────────────────────────────────────────────────────────── */
+
+.view[data-view="setup"].is-wizard { padding: 26px 18px 0; }
+
+.is-wizard .flow {
+  display: flex;
+  flex-direction: column;
+  max-width: 640px;
+  min-height: 100%;
+  margin: 0 auto;
+}
+
+@keyframes step-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.flow-head { margin-bottom: 16px; }
+.flow-head.is-in { animation: step-in var(--t3) var(--e); }
+.flow-count {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.flow-title {
+  margin-top: 4px;
+  font-size: 19px;
+  font-weight: 620;
+  letter-spacing: -.1px;
+  line-height: 1.25;
+  color: var(--text);
+}
+.flow-lead {
+  margin-top: 6px;
+  max-width: 560px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.is-wizard .flow-body { grid-template-columns: minmax(0, 1fr); }
+.is-wizard .flow-step { display: none; }
+.is-wizard .flow-step.is-current-step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: step-in var(--t3) var(--e);
+}
+
+/* Stays on screen however long the step grows: what is missing, and the
+   one way forward, are never scrolled out of reach. */
+.flow-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: auto;
+  padding: 14px 0 16px;
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg);
+  transition: background var(--t2) var(--e);
+}
+.is-wizard .flow-body { margin-bottom: 18px; }
+
+.flow-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.flow-status .dot { color: var(--dim); }
+.flow-status-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+#flow-next { min-width: 128px; }
+
+/* Toasts sit in the corner the footer's button lives in; while the flow is up they stand on
+   top of the footer instead of over the one way forward. */
+body.is-wizard-active .toasts { bottom: 66px; }
+
+/* An empty value reads as a sentence, not as data. */
+.field-value.is-empty { color: var(--dim); font-family: inherit; font-size: 12.5px; letter-spacing: 0; }
+.flow-next-arrow { width: 13px; height: 13px; transform: rotate(-90deg); margin-right: -3px; }
+
+/* ── Skeleton — what a card shows before the bridge has answered ────────── */
+
+@keyframes shimmer { to { background-position: 200% 0; } }
+.skel {
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--line-soft) 25%, var(--hover) 37%, var(--line-soft) 63%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+/* ── Toast — the reply to anything the user just did ────────────────────── */
+
+.toasts {
+  position: fixed;
+  right: 14px; bottom: 14px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 7px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 330px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  box-shadow: var(--shadow-pop);
+  animation: toast-in var(--t2) var(--e);
+  transition: opacity var(--t2) var(--e), transform var(--t2) var(--e);
+}
+.toast.is-ok     { border-left-color: var(--ok); }
+.toast.is-warn   { border-left-color: var(--warn); }
+.toast.is-danger { border-left-color: var(--danger); }
+.toast.is-leaving { opacity: 0; transform: translateY(6px) scale(.97); }
+.toast .icon { flex: 0 0 auto; color: var(--accent); }
+.toast.is-ok     .icon { color: var(--ok); }
+.toast.is-warn   .icon { color: var(--warn); }
+.toast.is-danger .icon { color: var(--danger); }
+
+.icon { width: 15px; height: 15px; flex: 0 0 auto; }
+.icon-lg { width: 26px; height: 26px; }
+
+/* The whole app fades in once, so first paint is not a flash of bare layout. */
+@keyframes boot { from { opacity: 0; } to { opacity: 1; } }
+.app { animation: boot var(--t3) var(--e); }
+
+/* ── Group rule, for a sidebar group with no name ────────────────────────
+   Alerts belongs to none of the other groups, and a line says that where a
+   heading would have to invent a word for it. */
+
+.nav-rule {
+  height: 1px;
+  margin: 9px 10px 8px;
+  background: rgba(255, 255, 255, .10);
+}
+
+/* ── Setting rows ────────────────────────────────────────────────────────
+   The shape every option on the Orb Walker and Settings is built from:
+   what it is and what it does on the left, the control that changes it on the
+   right. One row per decision, and the explanation lives beside the control
+   rather than in a tooltip nobody opens. */
+
+.settings { display: flex; flex-direction: column; }
+
+.setting {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 2px;
+  border-top: 1px solid var(--line-soft);
+}
+.settings > .setting:first-child { border-top: 0; }
+.setting.is-hidden { display: none; }
+
+.setting-text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.setting-text b { font-size: 12.5px; font-weight: 550; color: var(--text); }
+.setting-text > span { font-size: 11.5px; color: var(--muted); }
+
+.setting-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+}
+.setting-control .select { min-width: 190px; }
+.setting-dash { font-size: 11.5px; color: var(--dim); }
+
+/* Numbers that sit inline with words, in a row or in a sentence. */
+.input.is-tiny {
+  width: 58px;
+  height: 25px;
+  padding: 0 7px;
+  font-size: 12px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.setting-text .input.is-tiny { height: 21px; width: 50px; font-size: 11.5px; }
+
+/* A bound key, printed like one. */
+.keycap {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: var(--r-sm);
+  background: var(--hover);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+}
+.keycap.is-empty { color: var(--dim); font-family: inherit; font-style: italic; }
+
+/* A line of explanation under a card head, for the cards that need one. */
+.card-note {
+  margin: 2px 0 10px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.card.is-warn { border-color: rgba(200, 123, 22, .45); background: var(--warn-soft); }
+.card.is-warn .card-head > .icon { color: var(--warn); }
+
+.field-value.is-ok   { color: var(--ok); }
+.field-value.is-warn { color: var(--warn); }
+
+/* A line that belongs to one card and explains itself: what the last turn got
+   wrong, what the watcher is still missing. The text stays in the body colour
+   — amber on a pale amber is a sentence nobody can read — and the icon carries
+   the tone. */
+.tool-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text);
+  animation: editor-in var(--t2) var(--e);
+}
+.tool-note[hidden] { display: none; }
+.tool-note.is-warn { background: var(--warn-soft); }
+.tool-note.is-warn .icon { color: var(--warn); margin-top: 1px; }
+
+/* ── Log ─────────────────────────────────────────────────────────────────
+   A console, and the interface's only full-height screen: a toolbar, one
+   scroller, a footer, and nothing between them.
+
+   ONE ELEMENT PER LINE, ONE COLOUR PER LINE. A line is a single text node in
+   a single div — no spans dimming the timestamp, no badge for the level, no
+   markup inside the message. Two reasons, and both are the point of the
+   screen: a thousand lines of flat text stay fast to build and to scroll,
+   and text that is not cut into elements comes out of a selection exactly as
+   it went in. The level carries all the colour there is.
+
+   LIGHT STAYS LIGHT. No console here is black on a pale window — the surface
+   is the same card white the rest of the interface uses, and the dark theme
+   is the only place it goes dark. A terminal dropped into a light window is
+   a hole in it.
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* The view itself scrolls nowhere: the output inside it does. */
+.view[data-view="log"] { overflow: hidden; padding: 14px 16px 12px; }
+
+.log {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  height: 100%;
+  min-height: 0;
+}
+
+.log-bar { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.log-bar-spacer { flex: 1 1 auto; }
+
+.log-search { flex: 0 1 200px; height: 27px; font-size: 12px; }
+.log-search::-webkit-search-cancel-button { display: none; }
+.log-source { flex: 0 0 auto; }
+.log-source select { height: 27px; min-width: 132px; font-size: 12px; }
+
+/* The level buttons carry their own count, and their own colour when on: an
+   amber "Warnings 12" says what it is before the number is read. */
+.log-levels .seg-btn { display: inline-flex; align-items: center; gap: 6px; }
+.log-levels .seg-btn b {
+  font-weight: 600;
+  font-size: 11px;
+  opacity: .7;
+  font-variant-numeric: tabular-nums;
+}
+.seg-btn.is-warn.is-on   { background: var(--warn); }
+.seg-btn.is-danger.is-on { background: var(--danger); }
+.seg-btn.is-trace.is-on  { background: var(--dim); }
+
+/* A toolbar button that is a state rather than an errand — follow, wrap. */
+.btn.is-on {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent);
+}
+.btn.is-on:hover { background: var(--accent-soft); border-color: var(--dim); }
+
+.log-out {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 7px 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.6;
+  /* pre, not normal: the timestamp, level and source are padded into columns
+     and only a monospace font that keeps its spaces can line them up. The
+     wrap toggle relaxes it for the long lines that need it. */
+  white-space: pre;
+  user-select: text;
+  cursor: text;
+  /* Chrome's scroll anchoring fights the tail: it pins the viewport to a line
+     that is being pushed up, which is exactly what following must not do. */
+  overflow-anchor: none;
+}
+.log-out.is-wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* A wrapped line hangs under the message column instead of starting again at
+   the timestamp, so a stack trace reads as one entry and not as four more rows.
+   33ch is the width of the three columns in front of the message — see logText.
+   Only in wrap mode: unwrapped, there is nothing to hang. */
+.log-out.is-wrap .log-line {
+  padding-left: calc(7px + 33ch);
+  text-indent: -33ch;
+}
+
+.log-line {
+  padding: 0 7px;
+  border-radius: 3px;
+  color: var(--text);
+}
+/* Warnings and errors are tinted as well as coloured, because the thing being
+   looked for is usually one line in four hundred and colour alone has to be
+   read to be found. The bar is an inset shadow rather than a border: a border
+   would indent the text and break the columns. */
+.log-line.is-warn {
+  color: var(--warn);
+  background: var(--warn-soft);
+  box-shadow: inset 2px 0 0 var(--warn);
+}
+.log-line.is-error {
+  color: var(--danger);
+  background: var(--danger-soft);
+  box-shadow: inset 2px 0 0 var(--danger);
+  font-weight: 550;
+}
+.log-line.is-trace { color: var(--dim); }
+
+.log-empty {
+  padding: 22px 8px;
+  text-align: center;
+  font-family: var(--font);
+  font-size: 12px;
+  color: var(--dim);
+}
+
+/* Over the output, not in the flow: it appears and goes without moving a line
+   of text under it. */
+.log-jump {
+  position: absolute;
+  left: 50%;
+  bottom: 38px;
+  transform: translateX(-50%);
+  z-index: 2;
+  box-shadow: var(--shadow-pop);
+  animation: jump-in var(--t2) var(--e);
+}
+.log-jump[hidden] { display: none; }
+@keyframes jump-in { from { opacity: 0; transform: translate(-50%, 6px); } }
+
+.log-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+.log-foot-spacer { flex: 1 1 auto; }
+.log-foot b { color: var(--muted); font-weight: 600; }
+
+/* The session file's path, selectable: it is the one thing on this screen
+   somebody is asked to send on. */
+.log-file {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  user-select: text;
+  cursor: text;
+  max-width: 46%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Under ~980px the toolbar runs out of room before the output does. The
+   controls wrap; the console keeps the rest. */
+@media (max-width: 980px) {
+  .log-bar { flex-wrap: wrap; }
+  .log-search { flex: 1 1 140px; }
+  .log-bar-spacer { flex-basis: 100%; height: 0; }
+}
+
+/* ── Modal — the one question that interrupts ───────────────────────────────
+   Everything else in the product asks inline, next to the thing at risk. The
+   close question cannot: the thing at risk is the whole bot, and the click that
+   asked came from outside the page. So it is the only dialog, and it is built
+   from the same parts as the rest — a card, a tag, the danger tint the inline
+   confirm uses — plus the two things a dialog needs that a card does not: a
+   scrim that holds the window still, and an entrance the eye cannot miss.
+
+   LOUD, NOT NOISY. The signal is one red: a band across the top, the badge and
+   the button that ends the session. The badge breathes like a live status dot,
+   slowly, so the eye lands on it without the card ever flashing. A second X
+   while it is open shakes the card once instead of stacking another.
+
+   THE SAFE ANSWER IS THE BRAND'S. Keep running is the primary button, in the
+   rail's own navy, like the main action on every other screen: the card reads
+   as WK asking, and the red is left to the one button that ends it. */
+
+.modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(7, 22, 52, .42);
+  backdrop-filter: blur(3px) saturate(.9);
+  animation: scrim-in var(--t2) var(--e);
+}
+.modal-scrim[hidden] { display: none; }
+.modal-scrim.is-leaving { animation: scrim-out var(--t2) var(--e) forwards; }
+:root[data-theme="dark"] .modal-scrim { background: rgba(2, 7, 16, .62); }
+
+@keyframes scrim-in  { from { opacity: 0; } }
+@keyframes scrim-out { to   { opacity: 0; } }
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 468px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-pop), 0 0 0 1px rgba(206, 58, 58, .06);
+  animation: modal-in 340ms var(--spring);
+}
+.modal-scrim.is-leaving .modal { animation: modal-out var(--t2) var(--e) forwards; }
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(10px) scale(.95); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes modal-out {
+  to { opacity: 0; transform: translateY(6px) scale(.97); }
+}
+
+/* The band: the danger colour, running once across as the card lands, then
+   still. It says "this ends something" before a word of the card is read. */
+.modal-band {
+  height: 3px;
+  background: linear-gradient(90deg, var(--danger), #E86A4F 55%, var(--danger));
+  background-size: 200% 100%;
+  animation: band-run 900ms var(--e) 120ms both;
+}
+@keyframes band-run {
+  from { background-position: 100% 0; opacity: .35; }
+  to   { background-position: 0 0;     opacity: 1; }
+}
+
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 18px 18px 4px;
+}
+
+/* The product's own mark, the same art as wk.ico: the question is WK's. The red
+   is a pip on its corner — a power glyph that breathes like a live status dot,
+   slowly, so the eye lands on it without the card ever flashing. */
+.modal-badge {
+  position: relative;
+  flex: 0 0 auto;
+  width: 42px; height: 42px;
+}
+.modal-mark {
+  display: block;
+  width: 42px; height: 42px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(7, 22, 52, .22), 0 0 0 1px rgba(7, 22, 52, .08);
+}
+.modal-pip {
+  position: absolute;
+  right: -5px; bottom: -5px;
+  display: grid;
+  place-items: center;
+  width: 20px; height: 20px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--danger);
+  color: #FFFFFF;
+}
+.modal-pip .icon { width: 11px; height: 11px; }
+.modal-pip::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(206, 58, 58, .45);
+  animation: badge-breathe 2.2s var(--e) infinite;
+}
+@keyframes badge-breathe {
+  0%   { box-shadow: 0 0 0 0 rgba(206, 58, 58, .45); }
+  70%  { box-shadow: 0 0 0 7px rgba(206, 58, 58, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(206, 58, 58, 0); }
+}
+
+.modal-title {
+  margin-top: 1px;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: .1px;
+  color: var(--text);
+}
+.modal-lead { margin-top: 3px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.modal-lead b { color: var(--danger); font-weight: 650; }
+
+.modal-body { padding: 12px 18px 4px 73px; }
+
+.modal-section-label {
+  margin-bottom: 6px;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* What stops: one tag per running module, each with the live dot it has in the rail. */
+.modal-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.modal-chips .tag { height: 22px; padding: 0 9px; color: var(--text); animation: chip-in var(--t2) var(--e) both; }
+.modal-chips .tag .dot { width: 6px; height: 6px; }
+@keyframes chip-in { from { opacity: 0; transform: translateY(3px); } }
+.modal-idle { font-size: 12px; color: var(--muted); }
+
+/* One row, every button the same width, whether there are two answers or three:
+   a footer where the buttons wrap and differ in size reads as a layout that gave
+   up. The labels are short enough to share it — see index.html. */
+.modal-foot {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+  padding: 12px 18px 14px;
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg);
+}
+.modal-foot .btn { height: 32px; padding: 0 10px; }
+.modal-foot .btn[hidden] { display: none; }
+.modal-foot .btn.is-danger:focus-visible { outline-color: var(--danger); }
+
+/* A second X while the question is up: the card shakes once, like a locked nav item. */
+@keyframes modal-shake {
+  0%, 100% { transform: none; }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+.modal.is-nudging { animation: modal-shake 360ms var(--e); }
+
+/* The window is on its way out: the whole card goes quiet under the spinner. */
+.modal.is-closing .modal-body,
+.modal.is-closing .modal-head { opacity: .55; transition: opacity var(--t2) var(--e); }
+
+@media (max-width: 460px) {
+  .modal-body { padding-left: 18px; }
+  .modal-foot { grid-auto-flow: row; }
+}
+
+/* ── Setup and the Orb Walker ──────────────────────────────────────────────
+   The few parts this bot's screens need that wk's do not, built from the same
+   tokens: a step's verdict, the check's findings, and the cycle's numbering. */
+
+/* A button the page has put away stays away — .btn sets its own display, which
+   would otherwise outrank the hidden attribute. */
+.btn[hidden] { display: none; }
+
+/* A step's verdict: what it found in one bold line, and why underneath. The
+   detail keeps the line breaks the bot wrote, so a numbered list of causes
+   reads as a list. */
+.verdict { margin: 0 0 12px; animation: progress-in var(--t2) var(--e); }
+.verdict[hidden] { display: none; }
+.verdict-title { display: block; font-size: 12.5px; font-weight: 600; color: var(--text); }
+.verdict.is-ok     .verdict-title { color: var(--ok); }
+.verdict.is-warn   .verdict-title { color: var(--warn); }
+.verdict.is-danger .verdict-title { color: var(--danger); }
+.verdict-detail {
+  margin-top: 4px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--muted);
+  white-space: pre-line;
+}
+
+/* The check's findings, label over value, two to a row. */
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+.facts:empty { display: none; }
+.facts .field + .field { margin-top: 0; }
+
+/* The download question is a heads-up, not a warning: the brand's tint, not the red. */
+.confirm.is-info { border-color: rgba(13, 54, 119, .25); background: var(--accent-soft); }
+.confirm.is-info .icon { color: var(--accent); }
+.confirm .confirm-text b { font-weight: 600; }
+
+/* The cycle's place, printed where each of its rows starts. */
+.setting-num {
+  flex: 0 0 auto;
+  width: 22px; height: 22px;
+  display: grid; place-items: center;
+  border: 1.5px solid var(--line);
+  border-radius: 50%;
+  font: 600 10.5px/1 var(--font);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.setting-num .icon { width: 12px; height: 12px; color: var(--accent); }
+
+/* A status line that answers a check: blue when it passed, amber when it did not. */
+.setting-text > span.is-ok   { color: var(--ok); }
+.setting-text > span.is-warn { color: var(--warn); }
+
+/* Everything the switch would refuse over, one line each. */
+#orb-problems span { white-space: pre-line; }
+
+/* Back is the quiet way through the flow; Continue stays the loud one. */
+.flow-back-arrow { width: 13px; height: 13px; transform: rotate(90deg); margin-left: -3px; }
